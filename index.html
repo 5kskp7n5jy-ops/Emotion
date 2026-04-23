@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>감정 소비 앱</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  font-family: -apple-system;
+  background: #f5f5f5;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+input, button {
+  padding: 12px;
+  margin: 5px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  background: #eee;
+}
+
+.selected {
+  background: #4CAF50;
+  color: white;
+}
+
+.main-btn {
+  background: black;
+  color: white;
+  width: 100%;
+}
+
+h2 {
+  margin-bottom: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h2>💰 소비 기록</h2>
+<input type="number" id="amount" placeholder="금액 입력">
+
+<div>
+  <button onclick="selectEmotion(this,'스트레스')">😡</button>
+  <button onclick="selectEmotion(this,'기쁨')">😊</button>
+  <button onclick="selectEmotion(this,'충동')">🔥</button>
+  <button onclick="selectEmotion(this,'우울')">😢</button>
+</div>
+
+<button class="main-btn" onclick="save()">저장</button>
+</div>
+
+<div class="card">
+<h2>📊 감정 소비 분석</h2>
+<canvas id="chart"></canvas>
+<div id="insight"></div>
+</div>
+
+<div class="card">
+<h2>📋 기록</h2>
+<div id="list"></div>
+</div>
+
+<script>
+let selected = "";
+let data = JSON.parse(localStorage.getItem("data")) || [];
+
+function selectEmotion(btn, e){
+  selected = e;
+  document.querySelectorAll("button").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+}
+
+function save(){
+  let amount = parseInt(document.getElementById("amount").value);
+
+  if(!amount || !selected){
+    alert("입력하세요");
+    return;
+  }
+
+  data.push({amount, emotion: selected, time: new Date().getHours()});
+  localStorage.setItem("data", JSON.stringify(data));
+
+  document.getElementById("amount").value = "";
+  selected = "";
+
+  render();
+}
+
+function render(){
+  renderList();
+  renderChart();
+  generateInsight();
+}
+
+function renderList(){
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  data.slice().reverse().forEach(d=>{
+    list.innerHTML += `<div>${d.amount}원 - ${d.emotion}</div>`;
+  });
+}
+
+function renderChart(){
+  let totals = {};
+
+  data.forEach(d=>{
+    totals[d.emotion] = (totals[d.emotion] || 0) + d.amount;
+  });
+
+  let labels = Object.keys(totals);
+  let values = Object.values(totals);
+
+  let ctx = document.getElementById('chart');
+
+  if(window.chart) window.chart.destroy();
+
+  window.chart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values
+      }]
+    }
+  });
+}
+
+function generateInsight(){
+  if(data.length < 3) return;
+
+  let totals = {};
+
+  data.forEach(d=>{
+    totals[d.emotion] = (totals[d.emotion] || 0) + d.amount;
+  });
+
+  let maxEmotion = Object.keys(totals).reduce((a,b)=> totals[a] > totals[b] ? a : b);
+
+  document.getElementById("insight").innerHTML =
+    `👉 가장 많이 소비하는 감정: <b>${maxEmotion}</b>`;
+}
+
+render();
+</script>
+
+</body>
+</html>
